@@ -44,7 +44,9 @@ pip install Django -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 
 
-### 1.3 项目创建
+### 1.3 创建项目(Project)
+
+> Project: LN_project
 
 #### 0.命令总结
 
@@ -101,13 +103,16 @@ python manage.py runserver
 
 
 
-### 1.4 创建应用程序
+### 1.4 创建应用程序(App)
 
-Django 由一系列应用程序组成，它们协同工作让项目成为一个整体。
+> APP: learning_notes
+
+**Django 由一系列应用程序组成，它们协同工作让项目成为一个整体。**
 
 #### 1.初始化程序目录
 
 ```cmd
+# 注意切换到 Django 所在的文件目录
 # 搭建应用程序需要的基础设施
 python manage.py startapp learning_notes
 ```
@@ -296,6 +301,269 @@ python manage.py shell
 ```
 
 
+
+### 1.5 创建网页(URL)
+
+使用 Django 创建网页的步骤：
+
+- 定义 URL，将请求与网站 URL 匹配，确定返回哪个网页；
+- 编写视图，每个 URL 被映射到特定的视图，而视图函数使用模板渲染网页；
+- 编写模板；
+
+将 URL，视图，模板分离让参与者专注于自己擅长的方面：
+
+- 数据库专家—模型；
+- 程序员—视图代码；
+- 前端人员—模板；
+
+
+
+#### 1. 映射 URL
+
+通过 URL 请求网页，其中主页的 URL 最重要。
+
+- 默认 `urls.py` 在项目文件夹中；
+
+```python
+# LN_project\urls.py
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('learning_notes.urls')),
+]
+```
+
+- 需在应用程序文件夹下再创建一个 `urls.py`；
+
+```python
+# learning_notes\urls.py
+# 应用程序的 URL 模式
+from django.urls import path
+from . import views
+# 函数path和视图模块，.表示从当前的文件夹导入views
+
+# app_name 用于区分不同文件夹下的同名文件
+app_name = 'learning_notes'
+
+# path接受3个参数
+# 第一个参数帮助Django正确路由,空字符串与基础URL匹配
+# 第二个参数调用view.py中的那个函数
+# 第三个参数将URL的名称指定为index
+
+urlpatterns = [
+    # index
+    path('', views.index, name='index'),
+]
+```
+
+#### 1.2 编写视图
+
+视图函数接受请求中的信息，准备好生成网页所需的数据，将数据发送给浏览器。应用程序中的 `views.py` 是在创建应用程序时自动生成。
+
+```python
+# learning_notes\views.py
+# render根据视图提供渲染响应
+from django.shortcuts import render
+
+# Create your views here.
+def index(request):
+    # learning notes index page
+    return render(request, 'learning_notes/index.html')
+```
+
+#### 1.3 编写模板
+
+```html
+<!-- learning_notes/templates/learning_notes/index.html -->
+<!-- 新建 index.html -->
+<p>Learning Notes</p>
+<p>学习笔记记录</p>
+```
+
+此时访问 `http://127.0.0.1:8000/` 可查看对应的网页。
+
+
+
+#### 1.4 其他网页
+
+两个网页：1.显示所有主题；2.显示与主题相关的所有条目，在此之前先创建一个父模板，其他模板都继承自它；
+
+**对于每个网页，指定 URL 模式，编写视图函数，编写模板**
+
+**父模板**
+
+创建网站时，一些通用元素会出现在所有网页中，为避免重复书写，采用继承方法。**从而专注于每个模板的特性**。
+
+- 创建包含项目名称的元素，使用标签模板，用花括号和百分号`{% %}`表示；
+- `{% url 'learning_notes:index' %}`，表示 URL 与 `learning_notes/urls.py` 中定义的 `index` 的 URL 模式匹配，**其中 leanring_notes 是一个命名空间(由 urls.py 中的 app_name 得到)，index 是命名空间中一个独特的 URL 模式**；
+- `{% block content %}{% endblock content %}` 为块标签，名称为 `content`，作为占位符，包含的信息由子模板指定；
+
+```html
+<!-- learning_notes/templates/learning_notes/base.html,父模板-->
+<p>
+    <a href="{% url 'learning_notes:index' %}">Learning Notes</a>
+</p>
+
+{% block content %}{% endblock content %}
+```
+
+**子模板**
+
+重写 `index.html` ，继承 `base.html`
+
+```html
+{% extends 'learning_notes/base.html' %}
+
+{% block content %}
+<p>学习笔记记录</p>
+{% endblock content %}
+```
+
+#### 1.5 显示所有topics
+
+**URL 模式**
+
+设定 `http://localhost:8000/topics` 显示所有的主题页面
+
+```python
+# http://localhost:8000/topics
+# learning_notes\urls.py
+urlpatterns = [
+    # index
+    path('', views.index, name='index'),
+    # show all topics page
+    path('topics/', views.topics, name='topics')
+]
+```
+
+**视图**
+
+- `topics()` 包含一个形参，Django 从服务器中收到 `request` 对象，查询数据库，根据属性排序，返回查询集给 `topics`；
+- `content` 是一个字典，键：访问数据的名称，值：发送给模板的数据
+
+```python
+# learning_notes\views.py
+def topics(request):
+    topics = Topic.objects.order_by('date_added')
+    context = {'topics': topics}
+    return render(request, 'learning_notes/topics.html', context)
+```
+
+**模板**
+
+`for` 循环的模板标签
+
+```html
+{% for item in list %}
+	do somthing
+{% endfor %}
+```
+
+- 变量用双括号表示；
+- 模板标签 `{% empty %}` 表示 `topics` 为空则打印一条消息
+
+```html
+<!-- learning_notes/templates/learning_notes/topics.html,子模板-->
+{% extends 'learning_notes/base.html' %}
+
+{% block content %}
+<p>Topics</p>
+<ul>
+    {% for topic in topics %}
+    <li>{{topic.text}}</li>
+    {% empty %}
+    <li>No topics have been added yet?</li>
+    {% endfor %}
+</ul>
+{% endblock content %}
+```
+
+修改父模板，使其包含所有 `topics` 的链接。
+
+```html
+<!-- learning_notes/templates/learning_notes/base.html,父模板-->
+<p>
+    <a href="{% url 'learning_notes:index' %}">Learning Notes:主页</a>
+    <br>
+    <a href="{% url 'learning_notes:topics' %}">Topics：学习的主题</a>
+</p>
+
+{% block content %}{% endblock content %}
+```
+
+#### 1.6 显示特定 topics 页面
+
+显示特定的 `topic` 及其对应的记录 `entry`。
+
+**URL 模式**
+
+使用 `topic` 的 id 属性确定请求哪一个 `topic`，如 CS 对应的 id 为 1，则 URL 为`http://localhost:8000/topics/1/`
+
+```python
+# learning_notes\urls.py
+# show topics' entry
+path('topics/<int:topic_id>/', views.topic, name='topic')
+```
+
+**视图**
+
+可以先通过 `python manage.py shell` 调试
+
+```python
+# debug
+python manage.py shell
+from learning_notes.models import Topic
+topics = Topic.objects.all()
+topic = Topic.objects.get(id=4) # CS
+```
+
+添加 `topic` 到 `views.py` 中：
+
+```python
+# learning_notes\views.py
+def topic(request, topic_id):
+    topic = Topic.objects.get(id=topic_id)
+    # -表示降序
+    entries = topic.entry_set.order_by('-date_added')   
+    context = {'topic': topic, 'entries': entries}
+    return render(request, 'learning_notes/topic.html', context)
+```
+
+**模板**
+
+- 遍历 `view` 中 `content` 字典中的 `entries`；
+- 每个 `entry` 列出两条信息：条目时间戳和完整的文本，时间戳对应 `date_added` 的值；
+- 数线 `|` 表示过滤器，在渲染过程中对模板变量的值进行修改的函数；
+- 过滤器 `date: 'M d, Y H:i'` 对应的时间格式为：`January 1,2022 23:00`；
+- 过滤器 `linebreaks` 解释换行符，转换为浏览器能理解的格式；
+
+```html
+<!-- learning_notes/templates/learning_notes/topic.html,子模板-->
+{% extends 'learning_notes/base.html' %}
+{% block content %}
+<p>Topic: {{topic.text}}</p>
+<p>Entries:</p>
+<ul>
+    {% for entry in entries %}
+    <li>
+        <p>{{entry.date_added|date:'M d, Y H:i'}}</p>
+        <p>{{entry.text|linebreaks}}</p>
+    </li>
+    {% empty %}
+    <li>There are no entries for this topic yet.</li>
+    {% endfor %}
+</ul>
+{% endblock %}
+```
+
+**将每个 topic 的链接添加到 topics 中**
+
+```html
+<!-- learning_notes/templates/learning_notes/topics.html,子模板-->
+
+    <li><a href="{% url 'learning_notes:topic' topic.id %}">{{topic.text}}</a></li>
+```
 
 
 

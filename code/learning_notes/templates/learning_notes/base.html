@@ -1,0 +1,8 @@
+<!-- 父元素，所有页面都包含顶端标题 -->
+<p>
+    <a href="{% url 'learning_notes:index' %}">Learning Notes:主页</a>
+    <br>
+    <a href="{% url 'learning_notes:topics' %}">Topics：学习的主题</a>
+</p>
+
+{% block content %}{% endblock content %}
