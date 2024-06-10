@@ -4,7 +4,11 @@
 - data anlysis;
 - web application;
 
-## 1.Web Application
+## Web Application
+
+**Web Application 的核心：任意数量的用户都能与之交互，注册账户并使用它**
+
+## 1. Django 入门
 
 借助 python 组件开发富应用程序 (rich application)—**Web 应用程序**
 
@@ -568,6 +572,8 @@ def topic(request, topic_id):
 ```
 
 
+
+## 2. 用户账户
 
 
 
